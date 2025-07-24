@@ -22,4 +22,5 @@ target
 
 # Ignore example files and inputs as requested by the AoC about page.
 **/example.txt
+**/example*.txt
 **/input.txt
