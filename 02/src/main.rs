@@ -12,9 +12,12 @@ struct Hand {
 #[derive(PartialEq, Debug)]
 struct Game {
     id: u8,
-    draw_count: u8,
     possible: bool,
     hands: Vec<Hand>,
+    min_red: u8,
+    min_green: u8,
+    min_blue: u8,
+    power: u32,
 }
 
 /// Get the game id from the line.
@@ -93,7 +96,6 @@ fn part1(file_name: &str) -> u32 {
     for line in file_contents.lines() {
         let id = get_game_id(line);
         let hands = get_hands(line);
-        let draw_count: u8 = hands.len().try_into().expect("Couldn't get draw_count");
         let mut possible: bool = true;
         for hand in &hands {
             if !get_possible(&hand) {
@@ -103,9 +105,12 @@ fn part1(file_name: &str) -> u32 {
         }
         games.push(Game {
             id: id,
-            draw_count: draw_count,
             possible: possible,
             hands: hands,
+            min_red: u8::default(),
+            min_green: u8::default(),
+            min_blue: u8::default(),
+            power: u32::default(),
         });
     }
     for game in games {
@@ -116,8 +121,70 @@ fn part1(file_name: &str) -> u32 {
     sum
 }
 
+fn get_min_red(hands: &Vec<Hand>) -> u8 {
+    let mut min: u8 = 0;
+    for hand in hands {
+        if hand.red > min {
+            min = hand.red;
+        }
+    }
+    min
+}
+
+fn get_min_green(hands: &Vec<Hand>) -> u8 {
+    let mut min: u8 = 0;
+    for hand in hands {
+        if hand.green > min {
+            min = hand.green;
+        }
+    }
+    min
+}
+
+fn get_min_blue(hands: &Vec<Hand>) -> u8 {
+    let mut min: u8 = 0;
+    for hand in hands {
+        if hand.blue > min {
+            min = hand.blue;
+        }
+    }
+    min
+}
+
+fn get_power(red: u8, green: u8, blue: u8) -> u32 {
+    red as u32 * green as u32 * blue as u32
+}
+
+fn part2(file_name: &str) -> u32 {
+    let file_contents = std::fs::read_to_string(file_name).expect("Couldn't open file");
+    let mut power: u32 = 0;
+    let mut games: Vec<Game> = Vec::new();
+    for line in file_contents.lines() {
+        let id = get_game_id(line);
+        let hands = get_hands(line);
+        let min_red = get_min_red(&hands);
+        let min_green = get_min_green(&hands);
+        let min_blue = get_min_blue(&hands);
+        let power = get_power(min_red, min_green, min_blue);
+        games.push(Game {
+            id: id,
+            possible: true,
+            hands: hands,
+            min_red: min_red,
+            min_green: min_green,
+            min_blue: min_blue,
+            power: power,
+        });
+    }
+    for game in games {
+        power = power + game.power;
+    }
+    power
+}
+
 fn main() {
     println!("part1_result: {}", part1("input.txt"));
+    println!("part2_result: {}", part2("input.txt"));
 }
 
 #[cfg(test)]
@@ -147,5 +214,10 @@ mod tests {
     #[test]
     fn part1_example01() {
         assert_eq!(part1("example.txt"), 8);
+    }
+
+    #[test]
+    fn part2_example01() {
+        assert_eq!(part2("example.txt"), 2286);
     }
 }
