@@ -1,170 +1,5 @@
 use std::collections::HashMap;
-
-/// Structure representing the coordinate for something on the engine.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-struct Coord {
-    x: usize,
-    y: usize,
-}
-
-impl Coord {
-    /// Make a new Coord from x and y coordinates.
-    fn new(x: usize, y: usize) -> Coord {
-        Coord { x: x, y: y }
-    }
-
-    /// Return a cordinate north/up from this coordinate.
-    fn north(&self) -> Option<Coord> {
-        if self.y == 0 {
-            return None;
-        }
-        Some(Coord {
-            x: self.x,
-            y: self.y - 1,
-        })
-    }
-
-    /// Return a cordinate northeast/up-right from this coordinate.
-    fn northeast(&self) -> Option<Coord> {
-        if self.y == 0 {
-            return None;
-        }
-        Some(Coord {
-            x: self.x + 1,
-            y: self.y - 1,
-        })
-    }
-
-    /// Return a cordinate east/right from this coordinate.
-    fn east(&self) -> Option<Coord> {
-        Some(Coord {
-            x: self.x + 1,
-            y: self.y,
-        })
-    }
-
-    /// Return a cordinate southeast/down-right from this coordinate.
-    fn southeast(&self) -> Option<Coord> {
-        Some(Coord {
-            x: self.x + 1,
-            y: self.y + 1,
-        })
-    }
-
-    /// Return a cordinate south/down from this coordinate.
-    fn south(&self) -> Option<Coord> {
-        Some(Coord {
-            x: self.x,
-            y: self.y + 1,
-        })
-    }
-
-    /// Return a cordinate southwest/down-left from this coordinate.
-    fn southwest(&self) -> Option<Coord> {
-        if self.x == 0 {
-            return None;
-        }
-        Some(Coord {
-            x: self.x - 1,
-            y: self.y + 1,
-        })
-    }
-
-    /// Return a cordinate west/left from this coordinate.
-    fn west(&self) -> Option<Coord> {
-        if self.x == 0 {
-            return None;
-        }
-        Some(Coord {
-            x: self.x - 1,
-            y: self.y,
-        })
-    }
-
-    /// Return a cordinate northwest/up-left from this coordinate.
-    fn northwest(&self) -> Option<Coord> {
-        if self.x == 0 || self.y == 0 {
-            return None;
-        }
-        Some(Coord {
-            x: self.x - 1,
-            y: self.y - 1,
-        })
-    }
-
-    /// Get surrounding coordinates. Only return coords in range if maxes included.
-    fn get_surrounding_coords(&self, max_x: Option<usize>, max_y: Option<usize>) -> Vec<Coord> {
-        let mut coords: Vec<Coord> = Vec::new();
-        match self.north() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.northeast() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.east() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.southeast() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.south() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.southwest() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.west() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match self.northwest() {
-            None => (),
-            Some(coord) => coords.push(coord),
-        }
-        match max_x {
-            None => (),
-            Some(max_x) => coords.retain(|x| x.x <= max_x),
-        }
-        match max_y {
-            None => (),
-            Some(max_y) => coords.retain(|x| x.y <= max_y),
-        }
-        coords
-    }
-}
-
-/// Get max x and y values for the grid.
-fn get_grid_maxes(file_contents: &String) -> (usize, usize) {
-    let mut max_x: usize = 0;
-    let max_y: usize = file_contents.lines().count();
-    for line in file_contents.lines() {
-        let x_count = line.chars().count();
-        if x_count > max_x {
-            max_x = x_count;
-        }
-    }
-    (max_x, max_y)
-}
-
-/// Create the hashmap grid.
-fn make_grid(file_contents: String) -> HashMap<Coord, char> {
-    let mut grid = HashMap::new();
-    for (y, line) in file_contents.lines().enumerate() {
-        for (x, character) in line.chars().enumerate() {
-            match grid.insert(Coord::new(x, y), character) {
-                None => (),
-                Some(e) => panic!("Key was already present and contained: {}", e),
-            }
-        }
-    }
-    grid
-}
+use utilities::coord::Coord;
 
 /// Get hashmap of digits.
 fn get_digits(file_contents: &String) -> HashMap<Coord, u32> {
@@ -172,7 +7,7 @@ fn get_digits(file_contents: &String) -> HashMap<Coord, u32> {
     for (y, line) in file_contents.lines().enumerate() {
         for (x, character) in line.chars().enumerate().filter(|(_, x)| x.is_ascii_digit()) {
             match digits.insert(
-                Coord::new(x, y),
+                Coord::new(x as i32, y as i32),
                 character.to_digit(10).expect("failed to convert to digit."),
             ) {
                 None => (),
@@ -192,7 +27,7 @@ fn get_symbols(file_contents: &String) -> HashMap<Coord, char> {
             .enumerate()
             .filter(|(_, x)| !x.is_ascii_digit() && x != &'.')
         {
-            match symbols.insert(Coord::new(x, y), character) {
+            match symbols.insert(Coord::new(x as i32, y as i32), character) {
                 None => (),
                 Some(e) => panic!("Key was already present and contained: {}", e),
             }
@@ -205,7 +40,7 @@ fn get_symbols(file_contents: &String) -> HashMap<Coord, char> {
 fn get_touching_symbols(digits: &HashMap<Coord, u32>, symbols: HashMap<Coord, char>) -> Vec<Coord> {
     let mut touching: Vec<Coord> = Vec::new();
     for digit in digits {
-        let surrounding = digit.0.get_surrounding_coords(None, None);
+        let surrounding = digit.0.get_surrounding_coords();
         for coord in surrounding {
             match symbols.get(&coord) {
                 None => (),
@@ -232,8 +67,8 @@ fn get_numbers(file_contents: &String) -> Vec<Vec<Coord>> {
                 }
             } else {
                 match number {
-                    None => number = Some(vec![Coord::new(x, y)]),
-                    Some(ref mut num) => num.push(Coord::new(x, y)),
+                    None => number = Some(vec![Coord::new(x as i32, y as i32)]),
+                    Some(ref mut num) => num.push(Coord::new(x as i32, y as i32)),
                 }
             }
         }
@@ -274,11 +109,9 @@ fn convert_coords_to_u32(coords: &Vec<Coord>, digits: &HashMap<Coord, u32>) -> u
 /// Get sum of numbers touching a symbol.
 fn part1(file_name: &str) -> u32 {
     let file_contents = std::fs::read_to_string(file_name).expect("Couldn't open file");
-    let (max_x, max_y) = get_grid_maxes(&file_contents);
     let digits = get_digits(&file_contents);
     let symbols = get_symbols(&file_contents);
     let numbers = get_numbers(&file_contents);
-    // let grid = make_grid(file_contents);
     let touching_symbols = get_touching_symbols(&digits, symbols);
     let touching_nums = get_touching_numbers(&numbers, touching_symbols);
     let mut sum: u32 = 0;
@@ -286,6 +119,37 @@ fn part1(file_name: &str) -> u32 {
         sum = sum + convert_coords_to_u32(&num, &digits);
     }
     println!("sum: {}", sum);
+    sum
+}
+
+/// Get coords for all * symbols.
+fn get_gears(symbols: &HashMap<Coord, char>) -> HashMap<Coord, char> {
+    let mut gears: HashMap<Coord, char> = HashMap::new();
+    for symbol in symbols {
+        if symbol.1 == &'*' {
+            match gears.insert(*symbol.0, *symbol.1) {
+                None => (),
+                Some(e) => panic!("Key was already present and contained: {}", e),
+            }
+        }
+    }
+    gears
+}
+
+/// Get gear ratio of pairs of numbers touching a * symbol.
+fn part2(file_name: &str) -> u32 {
+    let file_contents = std::fs::read_to_string(file_name).expect("Couldn't open file");
+    let digits = get_digits(&file_contents);
+    let symbols = get_symbols(&file_contents);
+    let gears = get_gears(&symbols);
+    let numbers = get_numbers(&file_contents);
+    let touching_symbols = get_touching_symbols(&digits, gears);
+    let touching_nums = get_touching_numbers(&numbers, touching_symbols);
+    let mut sum: u32 = 0;
+    for num in &touching_nums {
+        sum = sum + convert_coords_to_u32(&num, &digits);
+    }
+    println!("Gear ratio: {}", sum);
     sum
 }
 
@@ -299,9 +163,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_grid_maxes() {
-        let file_contents = std::fs::read_to_string("example.txt").expect("Couldn't open file");
-        assert_eq!(get_grid_maxes(&file_contents), (10, 10));
+    fn test_part1() {
+        assert_eq!(part1("input.txt"), 539433)
     }
 
     #[test]
@@ -345,7 +208,7 @@ mod tests {
     #[test]
     fn test_get_surrounding_coords() {
         let cord = Coord::new(1, 1);
-        assert_eq!(cord.north(), Some(Coord::new(1, 0)));
+        assert_eq!(cord.north(), Coord::new(1, 0));
         let expected: Vec<Coord> = vec![
             Coord::new(1, 0), // N
             Coord::new(2, 0), // NE
@@ -356,16 +219,6 @@ mod tests {
             Coord::new(0, 1), // W
             Coord::new(0, 0), // NW
         ];
-        assert_eq!(cord.get_surrounding_coords(None, None), expected);
-
-        let cord = Coord::new(0, 0);
-        assert_eq!(cord.north(), None);
-        let expected: Vec<Coord> = vec![
-            Coord::new(1, 0), // E
-            Coord::new(1, 1), // SE
-            Coord::new(0, 1), // S
-        ];
-        assert_eq!(cord.get_surrounding_coords(None, None), expected);
-        assert_eq!(cord.get_surrounding_coords(Some(0), Some(0)), vec![]);
+        assert_eq!(cord.get_surrounding_coords(), expected);
     }
 }
