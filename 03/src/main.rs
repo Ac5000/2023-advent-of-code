@@ -1,11 +1,75 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 use utilities::coord::Coord;
+
+#[derive(PartialEq, Eq, Debug)]
+struct Digit {
+    coord: Coord,
+    value: u32,
+}
+
+impl fmt::Display for Digit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "( {} @ {} )", self.value, self.coord)
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct Symbol {
+    coord: Coord,
+    character: char,
+}
+
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "( {} @ {} )", self.character, self.coord)
+    }
+}
+
+#[derive(PartialEq, Eq, Debug)]
+struct Number {
+    digits: Vec<Digit>,
+    value: i32,
+}
+
+impl Number {
+    fn new() -> Self {
+        Self {
+            digits: Vec::new(),
+            value: 0,
+        }
+    }
+
+    fn get_value(&mut self) -> i32 {
+        match self.value {
+            0 => {
+                let mut val: i32 = 0;
+                for (tens, digit) in self.digits.iter().rev().enumerate() {
+                    val = val + (digit.value as i32 * 10_i32.pow(tens as u32))
+                }
+                self.value = val;
+                val
+            }
+            _ => self.value,
+        }
+    }
+}
+
+impl fmt::Display for Number {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "( {} - [", self.value)?;
+        for digit in &self.digits {
+            write!(f, "{} ", digit)?
+        }
+        write!(f, "]")?;
+        Ok(())
+    }
+}
 
 /// Get hashmap of digits.
 fn get_digits(file_contents: &String) -> HashMap<Coord, u32> {
     let mut digits = HashMap::new();
     for (y, line) in file_contents.lines().enumerate() {
-        for (x, character) in line.chars().enumerate().filter(|(_, x)| x.is_ascii_digit()) {
+        for (x, character) in line.chars().enumerate().filter(|(_, c)| c.is_ascii_digit()) {
             match digits.insert(
                 Coord::new(x as i32, y as i32),
                 character.to_digit(10).expect("failed to convert to digit."),
@@ -25,7 +89,7 @@ fn get_symbols(file_contents: &String) -> HashMap<Coord, char> {
         for (x, character) in line
             .chars()
             .enumerate()
-            .filter(|(_, x)| !x.is_ascii_digit() && x != &'.')
+            .filter(|(_, c)| !c.is_ascii_digit() && c != &'.')
         {
             match symbols.insert(Coord::new(x as i32, y as i32), character) {
                 None => (),
@@ -37,7 +101,10 @@ fn get_symbols(file_contents: &String) -> HashMap<Coord, char> {
 }
 
 /// Get vec of digits that touch a symbol.
-fn get_touching_symbols(digits: &HashMap<Coord, u32>, symbols: HashMap<Coord, char>) -> Vec<Coord> {
+fn get_touching_symbols(
+    digits: &HashMap<Coord, u32>,
+    symbols: &HashMap<Coord, char>,
+) -> Vec<Coord> {
     let mut touching: Vec<Coord> = Vec::new();
     for digit in digits {
         let surrounding = digit.0.get_surrounding_coords();
@@ -49,6 +116,56 @@ fn get_touching_symbols(digits: &HashMap<Coord, u32>, symbols: HashMap<Coord, ch
         }
     }
     touching
+}
+
+/// Get a vec of numbers in the grid.
+fn get_numbers2(file_contents: &String) -> Vec<Number> {
+    let mut numbers: Vec<Number> = Vec::new();
+    for (y, line) in file_contents.lines().enumerate() {
+        let mut number: Option<Number> = None;
+        for (x, character) in line.chars().enumerate() {
+            if !character.is_ascii_digit() {
+                match number {
+                    None => {
+                        continue;
+                    }
+                    Some(mut num) => {
+                        num.get_value();
+                        numbers.push(num);
+                        number = None;
+                    }
+                }
+                continue;
+            } else {
+                match number {
+                    None => {
+                        let mut num = Number::new();
+                        let digit: Digit = Digit {
+                            coord: Coord::new(x as i32, y as i32),
+                            value: character.to_digit(10).expect("Failed to convert digit."),
+                        };
+                        num.digits.push(digit);
+                        number = Some(num);
+                    }
+                    Some(ref mut num) => {
+                        let digit: Digit = Digit {
+                            coord: Coord::new(x as i32, y as i32),
+                            value: character.to_digit(10).expect("Failed to convert digit."),
+                        };
+                        num.digits.push(digit);
+                    }
+                }
+            }
+        }
+        match number {
+            None => (),
+            Some(mut num) => {
+                num.get_value();
+                numbers.push(num);
+            }
+        }
+    }
+    numbers
 }
 
 /// Get a vec of vec of coordinates that make up the various numbers on grid.
@@ -112,7 +229,7 @@ fn part1(file_name: &str) -> u32 {
     let digits = get_digits(&file_contents);
     let symbols = get_symbols(&file_contents);
     let numbers = get_numbers(&file_contents);
-    let touching_symbols = get_touching_symbols(&digits, symbols);
+    let touching_symbols = get_touching_symbols(&digits, &symbols);
     let touching_nums = get_touching_numbers(&numbers, touching_symbols);
     let mut sum: u32 = 0;
     for num in &touching_nums {
@@ -143,7 +260,7 @@ fn part2(file_name: &str) -> u32 {
     let symbols = get_symbols(&file_contents);
     let gears = get_gears(&symbols);
     let numbers = get_numbers(&file_contents);
-    let touching_symbols = get_touching_symbols(&digits, gears);
+    let touching_symbols = get_touching_symbols(&digits, &gears);
     let touching_nums = get_touching_numbers(&numbers, touching_symbols);
     let mut sum: u32 = 0;
     for num in &touching_nums {
@@ -154,8 +271,13 @@ fn part2(file_name: &str) -> u32 {
 }
 
 fn main() {
-    part1("example.txt");
-    part1("input.txt");
+    // part1("example.txt");
+    // part1("input.txt");
+    let file_contents = std::fs::read_to_string("example.txt").expect("Couldn't open file");
+    let nums = get_numbers2(&file_contents);
+    for num in nums {
+        println!("num:{}", num);
+    }
 }
 
 #[cfg(test)]
@@ -191,13 +313,31 @@ mod tests {
     #[test]
     fn test_get_numbers() {
         let file_contents = std::fs::read_to_string("example.txt").expect("Couldn't open file");
-        let numbers = get_numbers(&file_contents);
-        let expected = vec![Coord::new(0, 0), Coord::new(1, 0), Coord::new(2, 0)];
-        let expected2 = vec![Coord::new(7, 5), Coord::new(8, 5)];
-        let expected3 = vec![Coord::new(7, 2), Coord::new(8, 2), Coord::new(9, 2)];
+        let numbers = get_numbers2(&file_contents);
+        // let expected = vec![Coord::new(0, 0), Coord::new(1, 0), Coord::new(2, 0)];
+        // let expected2 = vec![Coord::new(7, 5), Coord::new(8, 5)];
+        // let expected3 = vec![Coord::new(7, 2), Coord::new(8, 2), Coord::new(9, 2)];
+        // assert!(numbers.contains(&expected));
+        // assert!(numbers.contains(&expected2));
+        let expected = Number {
+            value: 467,
+            digits: vec![
+                Digit {
+                    coord: Coord::new(0, 0),
+                    value: 4,
+                },
+                Digit {
+                    coord: Coord::new(1, 0),
+                    value: 6,
+                },
+                Digit {
+                    coord: Coord::new(2, 0),
+                    value: 7,
+                },
+            ],
+        };
+        assert_eq!(numbers.len(), 10);
         assert!(numbers.contains(&expected));
-        assert!(numbers.contains(&expected2));
-        assert!(numbers.contains(&expected3));
     }
 
     #[test]

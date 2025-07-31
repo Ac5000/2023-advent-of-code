@@ -1,3 +1,6 @@
+//! Module for making a coordinate on a grid or map. Useful for a lot of the AoC
+//! problems I did in the past.
+
 use std::{
     fmt,
     ops::{Add, Sub},
@@ -6,8 +9,8 @@ use std::{
 /// Structure representing a coordinate on the grid.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Coord {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
 impl Coord {
@@ -96,6 +99,7 @@ impl Coord {
 }
 
 impl fmt::Display for Coord {
+    /// Format the coordinate to print out nicely.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}, {})", self.x, self.y)
     }
@@ -104,6 +108,7 @@ impl fmt::Display for Coord {
 impl Add for Coord {
     type Output = Self;
 
+    /// Add two coordinates together to make a third. Useful for offsetting a distance.
     fn add(self, other: Self) -> Self {
         Self {
             x: self.x + other.x,
@@ -115,6 +120,7 @@ impl Add for Coord {
 impl Sub for Coord {
     type Output = Self;
 
+    /// Subtract two coordinates to see the x,y distance between them.
     fn sub(self, other: Self) -> Self {
         Self {
             x: self.x - other.x,
