@@ -1,6 +1,6 @@
 //! Module for making a grid or map. Having done AoC once before, I know that having
 //! a reusable base for making grids is useful.
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 use crate::coord::Coord;
 
@@ -69,6 +69,74 @@ impl Grid {
     pub fn has_coord(&self, coord: &Coord) -> bool {
         self.char_map.contains_key(coord)
     }
+
+    /// Separator on the x axis legend.
+    const X_LEGEND_SEP: char = '|';
+
+    /// Fill character on the x axis legend.
+    const X_LEGEND_FILL: char = ' ';
+
+    /// Separator on the y axis legend.
+    const Y_LEGEND_SEP: &str = " - ";
+
+    /// Get y legend width since we need to know it for aligning the x legend.
+    fn get_y_legend_width(&self) -> usize {
+        self.max_y.to_string().len() + Self::Y_LEGEND_SEP.len()
+    }
+
+    /// Make legend for x axis of the grid for display purpose.
+    fn x_legend(&self) -> String {
+        let mut legend: String = "".to_string();
+
+        // Offset each row of the legend by the y axis legend width.
+        let offset: &str = &" ".repeat(self.get_y_legend_width() as usize);
+
+        for i in (0..self.max_x.to_string().len()).rev() {
+            let mut line: String = offset.to_string();
+            for j in 0..self.max_x + 1 {
+                match j.to_string().chars().rev().nth(i) {
+                    None => line.push(Self::X_LEGEND_FILL),
+                    Some(c) => line.push(c),
+                }
+            }
+            legend.push_str("\n");
+            legend.push_str(&line);
+        }
+        legend.push_str("\n");
+        // Separator line
+        let line = offset.to_string()
+            + &Self::X_LEGEND_SEP
+                .to_string()
+                .repeat(self.max_x as usize + 1)
+            + "\n";
+        legend.push_str(&line);
+        legend
+    }
+}
+
+impl fmt::Display for Grid {
+    /// Format the grid to print out nicely with a legend and colors.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let width = self.max_y.to_string().len();
+        write!(f, "{}", self.x_legend())?;
+        for y in 0..self.max_y + 1 {
+            let y_legend: String = format!("{:>width$}{}", y, Self::Y_LEGEND_SEP);
+            write!(f, "{y_legend}")?;
+            for x in 0..self.max_x + 1 {
+                write!(
+                    f,
+                    "{}",
+                    self.char_map
+                        .get(&Coord { x: x, y: y })
+                        .expect("Didn't find char to print.")
+                )?;
+            }
+            if y < self.max_y {
+                write!(f, "\n")?
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -98,4 +166,19 @@ mod tests {
         assert_eq!(grid.char_map.get(&Coord { x: 2, y: 1 }), Some(&'6'));
         assert_eq!(grid.char_map.get(&Coord { x: 3, y: 1 }), None);
     }
+
+    #[test]
+    fn test_get_y_legend_width() {
+        let string: String = "123\n456".to_string();
+        let grid = Grid::new_from_string(&string);
+        assert_eq!(grid.get_y_legend_width(), 4)
+    }
+
+    // #[test]
+    // fn test_grid_display() {
+    //     let string: String = "01234567890\n01234567890".to_string();
+    //     let grid = Grid::new_from_string(&string);
+    //     println!("{grid}");
+    //     assert_eq!(grid.to_string(), string)
+    // }
 }

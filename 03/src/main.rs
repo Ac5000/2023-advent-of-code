@@ -1,5 +1,5 @@
 use std::{collections::HashMap, fmt};
-use utilities::coord::Coord;
+use utilities::{coord::Coord, grid::Grid};
 
 #[derive(PartialEq, Eq, Debug)]
 struct Digit {
@@ -273,11 +273,13 @@ fn part2(file_name: &str) -> u32 {
 fn main() {
     // part1("example.txt");
     // part1("input.txt");
-    let file_contents = std::fs::read_to_string("example.txt").expect("Couldn't open file");
-    let nums = get_numbers2(&file_contents);
-    for num in nums {
-        println!("num:{}", num);
-    }
+    // let file_contents = std::fs::read_to_string("example.txt").expect("Couldn't open file");
+    // let nums = get_numbers2(&file_contents);
+    // for num in nums {
+    //     println!("num:{}", num);
+    // }
+    let grid: Grid = Grid::new_from_file("input.txt");
+    println!("{}", grid);
 }
 
 #[cfg(test)]
