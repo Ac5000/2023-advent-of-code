@@ -280,6 +280,7 @@ fn main() {
     // }
     let grid: Grid = Grid::new_from_file("input.txt");
     println!("{}", grid);
+    println!("\x1b[33mError\x1b[0m");
 }
 
 #[cfg(test)]
