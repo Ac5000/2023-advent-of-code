@@ -2,6 +2,7 @@
 //! a reusable base for making grids is useful.
 use std::{collections::HashMap, fmt};
 
+use crate::color_text::cyan;
 use crate::coord::Coord;
 
 /// Structure representing a grid/map/2D array.
@@ -110,7 +111,8 @@ impl Grid {
                 .repeat(self.max_x as usize + 1)
             + "\n";
         legend.push_str(&line);
-        legend
+        cyan(&legend)
+        // legend
     }
 }
 
@@ -120,7 +122,7 @@ impl fmt::Display for Grid {
         let width = self.max_y.to_string().len();
         write!(f, "{}", self.x_legend())?;
         for y in 0..self.max_y + 1 {
-            let y_legend: String = format!("{:>width$}{}", y, Self::Y_LEGEND_SEP);
+            let y_legend: String = cyan(&format!("{:>width$}{}", y, Self::Y_LEGEND_SEP));
             write!(f, "{y_legend}")?;
             for x in 0..self.max_x + 1 {
                 write!(
