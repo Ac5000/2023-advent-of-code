@@ -1,6 +1,10 @@
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+};
 use utilities::{coord::Coord, grid::Grid};
 
+/// Struct representing a digit on the grid.
 #[derive(PartialEq, Eq, Debug)]
 struct Digit {
     coord: Coord,
@@ -8,6 +12,7 @@ struct Digit {
 }
 
 impl Digit {
+    /// Make new Digit from coordinate and value.
     fn new(coord: Coord, value: u32) -> Self {
         Self {
             coord: coord,
@@ -22,38 +27,34 @@ impl fmt::Display for Digit {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
-struct Symbol {
-    coord: Coord,
-    character: char,
-}
-
-impl fmt::Display for Symbol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "( {} @ {} )", self.character, self.coord)
-    }
-}
-
+/// Struct that represents a number from the grid.
 #[derive(PartialEq, Eq, Debug)]
 struct Number {
+    /// Vec of digits that make up the number.
     digits: Vec<Digit>,
-    value: i32,
+    /// Value of the number to be used in calculations.
+    value: u32,
+    /// HashSet of coordinates for each digit in the number.
+    digits_coords: HashSet<Coord>,
 }
 
 impl Number {
+    /// Make a new empty Number.
     fn new() -> Self {
         Self {
             digits: Vec::new(),
             value: 0,
+            digits_coords: HashSet::new(),
         }
     }
 
-    fn get_value(&mut self) -> i32 {
+    /// Calculate and return the value of the number.
+    fn get_value(&mut self) -> u32 {
         match self.value {
             0 => {
-                let mut val: i32 = 0;
+                let mut val: u32 = 0;
                 for (tens, digit) in self.digits.iter().rev().enumerate() {
-                    val = val + (digit.value as i32 * 10_i32.pow(tens as u32))
+                    val = val + (digit.value * 10_u32.pow(tens as u32))
                 }
                 self.value = val;
                 val
@@ -61,11 +62,12 @@ impl Number {
             _ => self.value,
         }
     }
-}
 
-impl Number {
-    fn digit_coords(&self) -> impl Iterator<Item = Coord> + '_ {
-        self.digits.iter().map(|digit| digit.coord)
+    /// Set the digits_coords HashSet.
+    fn set_digits_coords(&mut self) {
+        for digit in &self.digits {
+            self.digits_coords.insert(digit.coord);
+        }
     }
 }
 
@@ -83,10 +85,10 @@ impl fmt::Display for Number {
 /// Get hashmap of digits from the grid.
 fn get_digits(schematic: &Grid) -> HashMap<Coord, u32> {
     let mut digits = HashMap::new();
-    for (chord, character) in schematic.char_map.iter() {
+    for (coord, character) in schematic.char_map.iter() {
         if character.is_ascii_digit() {
             match digits.insert(
-                *chord,
+                *coord,
                 character.to_digit(10).expect("failed to convert to digit."),
             ) {
                 None => (),
@@ -100,9 +102,9 @@ fn get_digits(schematic: &Grid) -> HashMap<Coord, u32> {
 /// Get hashmap of symbols from the grid.
 fn get_symbols(schematic: &Grid) -> HashMap<Coord, char> {
     let mut symbols = HashMap::new();
-    for (chord, character) in schematic.char_map.iter() {
+    for (coord, character) in schematic.char_map.iter() {
         if !character.is_ascii_digit() && character != &'.' {
-            match symbols.insert(*chord, *character) {
+            match symbols.insert(*coord, *character) {
                 None => (),
                 Some(e) => panic!("Key was already present and contained: {}", e),
             }
@@ -134,6 +136,7 @@ fn get_numbers(schematic: &Grid, digits: HashMap<Coord, u32>) -> Vec<Number> {
                     None => {}
                     Some(mut num) => {
                         num.get_value();
+                        num.set_digits_coords();
                         numbers.push(num);
                     }
                 }
@@ -145,6 +148,7 @@ fn get_numbers(schematic: &Grid, digits: HashMap<Coord, u32>) -> Vec<Number> {
             None => {}
             Some(mut num) => {
                 num.get_value();
+                num.set_digits_coords();
                 numbers.push(num);
             }
         }
@@ -200,26 +204,37 @@ fn get_gears(symbols: &HashMap<Coord, char>) -> Vec<Coord> {
     gears
 }
 
-/// Get numbers that include a surrounding Coord in their digits.
-fn get_numbers_touching_gears(numbers: Vec<Number>, gears: Vec<Coord>) -> Vec<Number> {
-    let mut touching_nums: Vec<Number> = Vec::new();
+/// Get two numbers that have a gear surrounding Coord in their coordinates.
+/// swap_remove's the numbers from the original vec.
+fn get_numbers_touching_gear(numbers: &mut Vec<Number>, gear: Coord) -> Option<(Number, Number)> {
+    let mut num1_index: Option<usize> = None;
+    let mut num2_index: Option<usize> = None;
 
-    let mut symbol_coords: Vec<Coord> = Vec::new();
-    for gear in gears {
-        for coord in gear.get_surrounding_coords() {
-            symbol_coords.push(coord);
-        }
-    }
-
-    for number in numbers {
-        for digit in &number.digits {
-            if symbol_coords.contains(&digit.coord) && !touching_nums.contains(&number) {
-                touching_nums.push(number);
-                break;
+    for (index, number) in numbers.iter().enumerate() {
+        if !gear
+            .get_surrounding_coords()
+            .is_disjoint(&number.digits_coords)
+        {
+            if num1_index.is_none() {
+                num1_index = Some(index);
+            } else if num2_index.is_none() {
+                num2_index = Some(index);
+            } else {
+                // More than 2 numbers found touching gear, return None.
+                return None;
             }
         }
     }
-    touching_nums
+
+    if num1_index.is_some() && num2_index.is_some() {
+        let index2 = num2_index.unwrap();
+        let num2 = numbers.swap_remove(index2);
+        let index1 = num1_index.unwrap();
+        let num1 = numbers.swap_remove(index1);
+        Some((num1, num2))
+    } else {
+        None
+    }
 }
 
 /// Get gear ratio of pairs of numbers touching a * symbol.
@@ -228,13 +243,18 @@ fn part2(file_name: &str) -> u32 {
     let digits = get_digits(&schematic);
     let symbols = get_symbols(&schematic);
     let gears = get_gears(&symbols);
-    let numbers = get_numbers(&schematic, digits);
-    let touching_nums = get_touching_numbers(numbers, &symbols);
-    let mut sum: u32 = 0;
-    for num in &touching_nums {
-        sum = sum + num.value as u32;
+    let mut numbers = get_numbers(&schematic, digits);
+    let mut touching_nums: Vec<(Number, Number)> = Vec::new();
+    for gear in gears {
+        if let Some((num1, num2)) = get_numbers_touching_gear(&mut numbers, gear) {
+            touching_nums.push((num1, num2));
+        }
     }
-    println!("Gear ratio: {}", sum);
+    let mut sum: u32 = 0;
+    for num_pair in &touching_nums {
+        sum = sum + num_pair.0.value * num_pair.1.value;
+    }
+    println!("Part 2 Gear ratio: {}", sum);
     sum
 }
 
@@ -266,7 +286,7 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2("input.txt"), 99999999)
+        assert_eq!(part2("input.txt"), 75847567)
     }
 
     #[test]
@@ -296,16 +316,31 @@ mod tests {
         let digits = get_digits(&example_grid);
         let numbers = get_numbers(&example_grid, digits);
 
+        let coord1 = Coord::new(0, 0);
+        let coord2 = Coord::new(1, 0);
+        let coord3 = Coord::new(2, 0);
+
         let expected = Number {
             value: 467,
             digits: vec![
-                Digit::new(Coord::new(0, 0), 4),
-                Digit::new(Coord::new(1, 0), 6),
-                Digit::new(Coord::new(2, 0), 7),
+                Digit::new(coord1, 4),
+                Digit::new(coord2, 6),
+                Digit::new(coord3, 7),
             ],
+            digits_coords: HashSet::from([coord1, coord2, coord3]),
         };
-        println!("numbers:{:#?}", numbers);
+        // println!("numbers:{:#?}", numbers);
         assert_eq!(numbers.len(), 10);
         assert!(numbers.contains(&expected));
+    }
+
+    #[test]
+    fn test_get_gears() {
+        let example_grid = Grid::new_from_file("example.txt");
+        let symbols = get_symbols(&example_grid);
+        let gears = get_gears(&symbols);
+        assert!(gears.contains(&Coord::new(3, 1)));
+        assert!(gears.contains(&Coord::new(3, 4)));
+        assert!(gears.contains(&Coord::new(5, 8)));
     }
 }

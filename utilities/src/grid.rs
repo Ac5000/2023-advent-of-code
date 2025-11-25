@@ -129,7 +129,7 @@ impl fmt::Display for Grid {
                     f,
                     "{}",
                     self.char_map
-                        .get(&Coord { x: x, y: y })
+                        .get(&Coord::new(x, y))
                         .expect("Didn't find char to print.")
                 )?;
             }
@@ -159,14 +159,14 @@ mod tests {
         let grid = Grid::new_from_string(&string);
         assert_eq!(grid.max_x, 2);
         assert_eq!(grid.max_y, 1);
-        assert_eq!(grid.char_map.get(&Coord { x: 0, y: 2 }), None);
-        assert_eq!(grid.char_map.get(&Coord { x: 0, y: 0 }), Some(&'1'));
-        assert_eq!(grid.char_map.get(&Coord { x: 1, y: 0 }), Some(&'2'));
-        assert_eq!(grid.char_map.get(&Coord { x: 2, y: 0 }), Some(&'3'));
-        assert_eq!(grid.char_map.get(&Coord { x: 0, y: 1 }), Some(&'4'));
-        assert_eq!(grid.char_map.get(&Coord { x: 1, y: 1 }), Some(&'5'));
-        assert_eq!(grid.char_map.get(&Coord { x: 2, y: 1 }), Some(&'6'));
-        assert_eq!(grid.char_map.get(&Coord { x: 3, y: 1 }), None);
+        assert_eq!(grid.char_map.get(&Coord::new(0, 2)), None);
+        assert_eq!(grid.char_map.get(&Coord::new(0, 0)), Some(&'1'));
+        assert_eq!(grid.char_map.get(&Coord::new(1, 0)), Some(&'2'));
+        assert_eq!(grid.char_map.get(&Coord::new(2, 0)), Some(&'3'));
+        assert_eq!(grid.char_map.get(&Coord::new(0, 1)), Some(&'4'));
+        assert_eq!(grid.char_map.get(&Coord::new(1, 1)), Some(&'5'));
+        assert_eq!(grid.char_map.get(&Coord::new(2, 1)), Some(&'6'));
+        assert_eq!(grid.char_map.get(&Coord::new(3, 1)), None);
     }
 
     #[test]

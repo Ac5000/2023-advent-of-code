@@ -2,99 +2,79 @@
 //! problems I did in the past.
 
 use std::{
+    collections::HashSet,
     fmt,
+    hash::Hash,
     ops::{Add, Sub},
 };
 
 /// Structure representing a coordinate on the grid.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Coord {
+    /// X coordinate.
     pub x: i32,
+    /// Y coordinate.
     pub y: i32,
 }
 
 impl Coord {
     /// Make a new Coord from x and y coordinates.
-    pub fn new(x: i32, y: i32) -> Self {
+    pub const fn new(x: i32, y: i32) -> Self {
         Self { x: x, y: y }
     }
 
     /// Return a cordinate north/up from this coordinate.
-    pub fn north(&self) -> Self {
-        Self {
-            x: self.x,
-            y: self.y - 1,
-        }
+    pub const fn north(&self) -> Self {
+        Self::new(self.x, self.y - 1)
     }
 
     /// Return a cordinate northeast/up-right from this coordinate.
-    pub fn northeast(&self) -> Self {
-        Self {
-            x: self.x + 1,
-            y: self.y - 1,
-        }
+    pub const fn northeast(&self) -> Self {
+        Self::new(self.x + 1, self.y - 1)
     }
 
     /// Return a cordinate east/right from this coordinate.
-    pub fn east(&self) -> Self {
-        Self {
-            x: self.x + 1,
-            y: self.y,
-        }
+    pub const fn east(&self) -> Self {
+        Self::new(self.x + 1, self.y)
     }
 
     /// Return a cordinate southeast/down-right from this coordinate.
-    pub fn southeast(&self) -> Self {
-        Self {
-            x: self.x + 1,
-            y: self.y + 1,
-        }
+    pub const fn southeast(&self) -> Self {
+        Self::new(self.x + 1, self.y + 1)
     }
 
     /// Return a cordinate south/down from this coordinate.
-    pub fn south(&self) -> Self {
-        Self {
-            x: self.x,
-            y: self.y + 1,
-        }
+    pub const fn south(&self) -> Self {
+        Self::new(self.x, self.y + 1)
     }
 
     /// Return a cordinate southwest/down-left from this coordinate.
-    pub fn southwest(&self) -> Self {
-        Self {
-            x: self.x - 1,
-            y: self.y + 1,
-        }
+    pub const fn southwest(&self) -> Self {
+        Self::new(self.x - 1, self.y + 1)
     }
 
     /// Return a cordinate west/left from this coordinate.
-    pub fn west(&self) -> Self {
-        Self {
-            x: self.x - 1,
-            y: self.y,
-        }
+    pub const fn west(&self) -> Self {
+        Self::new(self.x - 1, self.y)
     }
 
     /// Return a cordinate northwest/up-left from this coordinate.
-    pub fn northwest(&self) -> Self {
-        Self {
-            x: self.x - 1,
-            y: self.y - 1,
-        }
+    pub const fn northwest(&self) -> Self {
+        Self::new(self.x - 1, self.y - 1)
     }
 
-    /// Get surrounding coordinates. Only return coords in range if maxes included.
-    pub fn get_surrounding_coords(&self) -> Vec<Self> {
-        let mut coords: Vec<Self> = Vec::new();
-        coords.push(self.north());
-        coords.push(self.northeast());
-        coords.push(self.east());
-        coords.push(self.southeast());
-        coords.push(self.south());
-        coords.push(self.southwest());
-        coords.push(self.west());
-        coords.push(self.northwest());
-        coords
+    /// Get surrounding coordinates.
+    pub fn get_surrounding_coords(&self) -> HashSet<Coord> {
+        HashSet::from([
+            self.north(),
+            self.northeast(),
+            self.east(),
+            self.southeast(),
+            self.south(),
+            self.southwest(),
+            self.west(),
+            self.northwest(),
+        ])
     }
 }
 
@@ -110,10 +90,7 @@ impl Add for Coord {
 
     /// Add two coordinates together to make a third. Useful for offsetting a distance.
     fn add(self, other: Self) -> Self {
-        Self {
-            x: self.x + other.x,
-            y: self.y + other.y,
-        }
+        Self::new(self.x + other.x, self.y + other.y)
     }
 }
 
@@ -122,10 +99,7 @@ impl Sub for Coord {
 
     /// Subtract two coordinates to see the x,y distance between them.
     fn sub(self, other: Self) -> Self {
-        Self {
-            x: self.x - other.x,
-            y: self.y - other.y,
-        }
+        Self::new(self.x - other.x, self.y - other.y)
     }
 }
 
@@ -144,7 +118,7 @@ mod tests {
     fn test_get_surrounding_coords() {
         let cord = Coord::new(1, 1);
         assert_eq!(cord.north(), Coord::new(1, 0));
-        let expected: Vec<Coord> = vec![
+        let expected = HashSet::from([
             Coord::new(1, 0), // N
             Coord::new(2, 0), // NE
             Coord::new(2, 1), // E
@@ -153,7 +127,7 @@ mod tests {
             Coord::new(0, 2), // SW
             Coord::new(0, 1), // W
             Coord::new(0, 0), // NW
-        ];
+        ]);
         assert_eq!(cord.get_surrounding_coords(), expected);
     }
 
